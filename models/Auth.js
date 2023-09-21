@@ -5,7 +5,10 @@ const AuthSchema = new Schema({
     email: {
         type: String,
         required: true,
-        lowercase: true
+        lowercase: true,
+        index: {
+            unique: true
+        }
     },
     password: {
         type: String,

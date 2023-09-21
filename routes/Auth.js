@@ -4,6 +4,8 @@ const bcrypt = require('bcrypt')
 const express = require('express')
 const router = express.Router()
 const Auth = require('../models/Auth')
+const RefreshToken = require('../models/RefreshToken')
+const BlackList = require('../models/TokensBlackList')
 
 router.use(express.json())
 router.post('/signup', async (req, res) => {
@@ -41,8 +43,14 @@ router.post('/signup', async (req, res) => {
         const User = { id: user._id, email: user.email, password: user.password }
         const token = jwt.sign(User, process.env.ACCESS_TOKEN_SECRET, {expiresIn: '3h'})
         const refreshToken = jwt.sign(User, process.env.REFRESH_ACCESS_TOKEN_SECRET)
+        const addRefreshToken = new RefreshToken({
+            token: refreshToken
+        })
+
+        await addRefreshToken.save()
+
         const response = {
-            token: token,
+            accesstoken: token,
             refreshtoken: refreshToken 
         }
         res.status(200).json(response)
@@ -72,14 +80,52 @@ router.post('/login', async (req, res) =>{
         const User = { id: user._id, email: user.email, password: user.password }
         const token = jwt.sign(User, process.env.ACCESS_TOKEN_SECRET, {expiresIn: '3h'})
         const refreshToken = jwt.sign(User, process.env.REFRESH_ACCESS_TOKEN_SECRET)
+        const addRefreshToken = new RefreshToken({
+            token: refreshToken
+        })
+
+        await addRefreshToken.save()
+
         const response = {
-            token: token,
+            accesstoken: token,
             refreshtoken: refreshToken 
         }
         res.status(200).json(response)
     } catch (err) {
         res.status(500)
     }
+})
+
+router.post('/token', async (req, res) =>{
+    const {token} = req.body
+    if (!token) return res.status(400).json({error: "refresh token is missing", message: "please provide a refresh token"})
+    
+    try {
+        const decoded = jwt.verify(token, process.env.REFRESH_ACCESS_TOKEN_SECRET)
+        const newTokenData = {
+            id: decoded.id,
+            email: decoded.email,
+            password: decoded.password
+        }
+
+        const newToken = jwt.sign(newTokenData, process.env.ACCESS_TOKEN_SECRET)
+        res.json({accesstoken: newToken})
+
+    } catch (err) {
+        res.status(400).json({err: err.name, message: err.message})
+    }
+})
+
+router.post('/logout', async (req,res) =>{
+    const {accesstoken, refreshtoken} = req.body
+    if (!accesstoken || !refreshtoken) return res.status(400).json({error: "missing fields", message: "please provide both refresh and accesss token"})
+
+    const token = new BlackList({
+        token: accesstoken
+    })
+    await token.save()
+    res.status(200).send(true)
+
 })
 
 module.exports = router
