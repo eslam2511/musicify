@@ -120,6 +120,9 @@ router.post('/logout', async (req,res) =>{
     const {accesstoken, refreshtoken} = req.body
     if (!accesstoken || !refreshtoken) return res.status(400).json({error: "missing fields", message: "please provide both refresh and accesss token"})
 
+    const isLogedIn = RefreshToken.find({token: refreshtoken})
+
+
     const token = new BlackList({
         token: accesstoken
     })

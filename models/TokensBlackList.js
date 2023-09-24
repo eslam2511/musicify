@@ -13,7 +13,7 @@ const TokenBlackList = new Schema({
     expireAt: {
         type: Date,
         default: new Date(new Date().valueOf() + 60000),
-        expires: 60
+        expires: 10800
     }
 })
 
